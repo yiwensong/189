@@ -111,7 +111,7 @@ def p3():
   NUM_FOLDS = 10
   XV_SIZE = 10000
   FOLD_SIZE = XV_SIZE/NUM_FOLDS
-  C_VALS = [.001,.01,.1,1,10,100,1000]
+  C_VALS = map(lambda a:2**a,xrange(-10,11))
   best = -1
   best_C = None
   # Loop through C-values
@@ -148,7 +148,8 @@ def p3():
       best_C = cval
   # Predict test data
   f_fit = svm.SVC(C=best_C,kernel='linear')
-  f_fit.fit(train_img,train_lab)
+  keg_train = k_folds(1,20000)[0]
+  f_fit.fit([train_img[x] for x in keg_train],[train_lab[x] for x in keg_train])
   global keg_pred
   keg_pred = f_fit.predict(test_img)
 
