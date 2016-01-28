@@ -153,3 +153,7 @@ def p3():
   keg_pred = f_fit.predict(test_img)
 
 p3()
+
+
+
+
