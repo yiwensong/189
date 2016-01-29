@@ -6,10 +6,10 @@ from sklearn import svm
 from sklearn import metrics
 import random
 from matplotlib import pyplot as plt
+import pandas as pd
 
 NUM_CLASSES = 10
 LEARN_SIZES = [100,200,500,1000,2000,5000,10000]
-LEARN_SIZES = []
 VERIF_SIZE = 10000
 DATA_LOC = 'data/digit-dataset/'
 
@@ -24,7 +24,8 @@ train_lab = sio.loadmat(DATA_LOC + 'train.mat')['train_labels']
 # Format the data into something that's actually usable. Jesus.
 train_img = format_img(train_img)
 train_lab = np.ravel(train_lab)
-test_img = format_img(test_img)
+# test_img = format_img(test_img)
+test_img = map(zip_star,test_img)
 train_img = map(np.ndarray.flatten,train_img)
 test_img = map(np.ndarray.flatten,test_img)
 
@@ -66,7 +67,7 @@ def p1():
   plt.xscale('log')
   plt.savefig('plots/p1.png',format='png')
 
-# p1()
+p1()
 
 def p2():
   # Problem 2: Create a confusion matrix
@@ -96,7 +97,7 @@ def p2():
     plt.yticks(np.arange(NUM_CLASSES),xrange(NUM_CLASSES))
     plt.savefig('plots/p2_conf_' + str(l_size) + '.png', format='png')
 
-# p2()
+p2()
 
 def k_folds(k,size=DATA_SIZE):
   '''Generates k folds, gives 2d array of DATA_SIZE/k indices'''
@@ -146,15 +147,20 @@ def p3():
     if succ > best:
       best = succ
       best_C = cval
+  # Save the best C value
+  f = open('plots/bestC.csv','w')
+  f.write(str(best_C))
+  f.close()
   # Predict test data
   f_fit = svm.SVC(C=best_C,kernel='linear')
   keg_train = k_folds(1,20000)[0]
   f_fit.fit([train_img[x] for x in keg_train],[train_lab[x] for x in keg_train])
   global keg_pred
   keg_pred = f_fit.predict(test_img)
+  df = pd.DataFrame(keg_pred)
+  df.columns = ['category']
+  df.index = df.index + 1
+  df.index.names = ['id']
+  df.to_csv('plots/digits.csv')
 
 p3()
-
-
-
-
