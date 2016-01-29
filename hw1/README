@@ -1,0 +1,21 @@
+Required packages:
+python2
+scipy
+numpy
+pandas
+sklearn
+
+recommended:
+full anaconda2 installation
+
+Make sure you have a directory called 'plots' in
+the fold where you are running the code.
+
+Make sure data is in the folder called 'data', 
+like how the .zip file came.
+
+to run stuff for digits (problems 1,2,3):
+python p1.py
+
+to run stuff for spam (problem 4):
+python p2.py
