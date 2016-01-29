@@ -1,4 +1,4 @@
-# HW1 Part 1
+# HW1 Part 2
 
 from scipy import io as sio
 import numpy as np
@@ -11,96 +11,27 @@ import pandas as pd
 NUM_CLASSES = 10
 LEARN_SIZES = [100,200,500,1000,2000,5000,10000]
 VERIF_SIZE = 10000
-DATA_LOC = 'data/digit-dataset/'
+DATA_LOC = 'data/spam-dataset/'
 
 zip_star = lambda mat: np.array(zip(*mat))
 format_img = lambda img: zip_star(map(zip_star,img))
 
 # Load the data
-test_img = sio.loadmat(DATA_LOC + 'test.mat')['test_images']
-train_img = sio.loadmat(DATA_LOC + 'train.mat')['train_images']
-train_lab = sio.loadmat(DATA_LOC + 'train.mat')['train_labels']
+spams = sio.loadmat(DATA_LOC + 'spam_data.mat')
+train_img = spams['training_data']
+train_lab = np.ravel(spams['training_labels'])
+test_img = spams['test_data']
 
 # Format the data into something that's actually usable. Jesus.
-train_img = format_img(train_img)
-train_lab = np.ravel(train_lab)
-# test_img = format_img(test_img)
-test_img = map(zip_star,test_img)
-train_img = map(np.ndarray.flatten,train_img)
-test_img = map(np.ndarray.flatten,test_img)
+# Good news! The data is actually useable this time.
 
-DATA_SIZE = len(train_lab)
+# Find how many data points there are
+DATA_SIZE = train_lab.shape[0]
 
 # Generate a verification set
-selection = range(0,DATA_SIZE)
-random.shuffle(selection)
-verif = selection[0:VERIF_SIZE]
-sel = selection[VERIF_SIZE:]
-
-s = dict()
-pred = dict()
-actl = dict()
-
-# Try some different sizes for training and see how they do
-for l_size in LEARN_SIZES:
-
-  print 'learning and verifying for n =',l_size
-
-  # Select some verification data
-  random.shuffle(sel)
-  train_selection = sel[0:l_size]
-
-  # Train the classifier
-  lin_fit = svm.SVC(kernel='linear')
-  lin_fit.fit([train_img[i] for i in train_selection],[train_lab[i] for i in train_selection])
-
-  # Try and predict the set
-  pred[l_size] = lin_fit.predict([train_img[i] for i in verif])
-  actl[l_size] = [train_lab[i] for i in verif]
-  s[l_size] = float(sum(map(lambda a,b: 1 if a==b else 0,pred[l_size],actl[l_size])))/float(VERIF_SIZE)
-  print l_size,'success rate:',s[l_size]
-  print ''
-
-def p1():
-  # Problem 1: Plot training data size versus success rate
-  plt.plot(LEARN_SIZES,[s[sz] for sz in LEARN_SIZES])
-  plt.xscale('log')
-  plt.savefig('plots/p1.png',format='png')
-
-# p1()
-
-def p2():
-  # Problem 2: Create a confusion matrix
-  confusion = dict()
-  for l_size in LEARN_SIZES:
-  
-    # Find the confusion matrix
-    confusion[l_size] = metrics.confusion_matrix(actl[l_size],pred[l_size])
-
-    plt.clf()
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect(1)
-    res = ax.imshow(confusion[l_size],interpolation='nearest',cmap=plt.cm.Purples)
-    w,h = confusion[l_size].shape
-
-    for x in xrange(w):
-      for y in xrange(h):
-        ax.annotate(str(confusion[l_size][x][y]), xy=(y,x),\
-            horizontalalignment='center',\
-            verticalalignment='center')
-
-    plt.title('Confusion matrix for ' + str(l_size) + ' samples')
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.xticks(np.arange(NUM_CLASSES),xrange(NUM_CLASSES))
-    plt.yticks(np.arange(NUM_CLASSES),xrange(NUM_CLASSES))
-    plt.savefig('plots/p2_conf_' + str(l_size) + '.png', format='png')
-
-# p2()
-
 def k_folds(k,size=DATA_SIZE):
   '''Generates k folds, gives 2d array of DATA_SIZE/k indices'''
+  selection = range(DATA_SIZE)
   random.shuffle(selection)
   fold_size = size/k
   folds = [''] * k
@@ -108,9 +39,9 @@ def k_folds(k,size=DATA_SIZE):
     folds[i] = selection[i*fold_size:(i+1)*fold_size]
   return folds
 
-def p3():
+def learn():
   NUM_FOLDS = 10
-  XV_SIZE = 10000
+  XV_SIZE = DATA_SIZE/10
   FOLD_SIZE = XV_SIZE/NUM_FOLDS
   C_VALS = map(lambda a:2**a,xrange(-10,11))
   best = -1
@@ -148,19 +79,23 @@ def p3():
       best = succ
       best_C = cval
   # Save the best C value
-  f = open('plots/bestC.csv','w')
+  f = open('plots/spam_bestC.csv','w')
   f.write(str(best_C))
   f.close()
   # Predict test data
   f_fit = svm.SVC(C=best_C,kernel='linear')
   keg_train = k_folds(1,20000)[0]
   f_fit.fit([train_img[x] for x in keg_train],[train_lab[x] for x in keg_train])
+  return f_fit
+
+def fit(f_fit):
   global keg_pred
   keg_pred = f_fit.predict(test_img)
   df = pd.DataFrame(keg_pred)
   df.columns = ['category']
   df.index = df.index + 1
   df.index.names = ['id']
-  df.to_csv('plots/digits.csv')
+  df.to_csv('plots/spam.csv')
 
-p3()
+model = learn()
+fit(model)
