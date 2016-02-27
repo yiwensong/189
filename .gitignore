@@ -1,0 +1,8 @@
+*.pyc
+*.png
+*.zip
+*.pdf
+.*.swp
+
+hw3/out
+hw3/data/*
