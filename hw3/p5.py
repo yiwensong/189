@@ -18,6 +18,7 @@ NUM_CLASSES = 10
 
 zip_star = lambda mat: np.array(zip(*mat))
 format_img = lambda img: zip_star(map(zip_star,img))
+format_img = lambda img: np.array(map(np.transpose,np.transpose(img)))
 
 def load_data_digits():
   ''' Loads the digit dataset according to the shitty format
@@ -124,11 +125,13 @@ def find_sigmas(samples_df):
 #   ''' Takes in a feature vector (x), a matters vector of features that matter
 #   and a transformation matrix A to calculate the probability of P(X=x|label) '''
 
+GAMMA = .0001
 def train_classifier(label,mus,sigmas):
   ''' Takes in a label, the mus and the sigmas.
   Returns the pdf function of the distribution it gives.'''
   try:
-    mvn = stats.multivariate_normal(mus[label],sigmas[label],allow_singular=True)
+    mvn = stats.multivariate_normal(mus[label],\
+        sigmas[label]+np.diag([GAMMA]*len(mus[label])))
   except Exception as e:
     print label
     print mus
@@ -164,7 +167,7 @@ def parallel_multi(xs,labels,mus,sigmas):
 def digits(linear=False):
   ''' Does digits automatically '''
   NUM_TRAIN = 50000
-  NUM_VAL = 10000
+  NUM_VAL = 100
   train_img,train_lab,test_img = load_data_digits()
   train_img = normalize(train_img)
   
