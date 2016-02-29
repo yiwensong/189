@@ -19,6 +19,11 @@ NUM_CLASSES = 10
 zip_star = lambda mat: np.array(zip(*mat))
 format_img = lambda img: zip_star(map(zip_star,img))
 format_img = lambda img: np.array(map(np.transpose,np.transpose(img)))
+def format_img(img):
+  img = np.swapaxes(img,0,2)
+  # img = np.swapaxes(img,1,2)
+  img = img.reshape((img.shape[0],img.shape[1]*img.shape[2]))
+  return img
 
 def load_data_digits():
   ''' Loads the digit dataset according to the shitty format
@@ -56,8 +61,8 @@ def normalize(imgs):
     ''' Takes input nparray R^d and normalizes for you'''
     if max(img) == 0:
       return img
-    return (img/la.norm(img))*255
-  return np.array(map(normalize_helper,imgs),dtype='int')
+    return (img/la.norm(img))
+  return np.array(map(normalize_helper,imgs),dtype='double')
 
 def get_samples(n,img,lab):
   ''' Gives you n samples from the digits data '''
@@ -125,7 +130,7 @@ def find_sigmas(samples_df):
 #   ''' Takes in a feature vector (x), a matters vector of features that matter
 #   and a transformation matrix A to calculate the probability of P(X=x|label) '''
 
-GAMMA = .0001
+GAMMA = .001
 def train_classifier(label,mus,sigmas):
   ''' Takes in a label, the mus and the sigmas.
   Returns the pdf function of the distribution it gives.'''
@@ -137,7 +142,7 @@ def train_classifier(label,mus,sigmas):
     print mus
     print sigmas
     raise e
-  return mvn.pdf
+  return mvn.logpdf
 
 def classify(x,classifiers,classes):
   ''' Classifies x using the gaussian model '''
@@ -152,7 +157,7 @@ def classify_multi(xs,classifiers,classes):
 def parallel_pdf(x,label,mus,sigmas):
   ''' The parallelable version of train + classify '''
   mvn = stats.multivariate_normal(mus[label],sigmas[label],allow_singular=True)
-  return mvn.pdf(x)
+  return mvn.logpdf(x)
 
 def parallel_classify(args):
   x,labels,mus,sigmas = args
@@ -164,10 +169,16 @@ def parallel_multi(xs,labels,mus,sigmas):
   args = map(lambda a,b,c,d: (a,b,c,d), xs,[labels]*len(xs),[mus]*len(xs),[sigmas]*len(xs))
   return np.array(p.map(parallel_classify,args))
 
-def digits(linear=False):
+def plot_sigma(sigma,name = ''):
+  print 'plotting...'
+  # plt.figure()
+  # plt.pcolor(sigma)
+  # plt.savefig('out/5C' + str(name) + '.png')
+
+def digits(linear=False,plot=False,smallplot=True):
   ''' Does digits automatically '''
   NUM_TRAIN = 50000
-  NUM_VAL = 100
+  NUM_VAL = 1000
   train_img,train_lab,test_img = load_data_digits()
   train_img = normalize(train_img)
   
@@ -191,6 +202,12 @@ def digits(linear=False):
   predicted = classify_multi(v_img,classifiers,list(set(train_lab)))
   # predicted = parallel_multi(v_img,list(set(train_lab)),mus,sigmas)
   print 'error rate:',(np.sum(predicted != v_lab))/float(NUM_VAL)
+
+  if plot:
+    map(plot_sigma,sigmas.values()[:2],xrange(2))
+  if smallplot:
+    plt.pcolor(train_img[30000].reshape(28,28),cmap=plt.cm.Blues)
+    plt.savefig('out/ex.png')
 
   test_img = normalize(test_img)
   test_predicted = classify_multi(test_img,classifiers,list(set(train_lab)))
@@ -250,7 +267,8 @@ def spam(linear=True):
 # main
 
 def main():
-  digits()
+  print 'what'
+  # digits()
   # spam()
 
 
