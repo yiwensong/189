@@ -278,9 +278,12 @@ def main():
   tr_sizes = [100,200,500,1000,2000,5000,10000,30000,50000]
   lda_dict = dict()
   qda_dict = dict()
-  for i in tr_sizes:
-    lda_dict[i] = digits(linear=True,training_set_size=i)
-    qda_dict[i] = digits(linear=False,training_set_size=i)
+  with open('out/5d.csv','w') as f:
+    for i in tr_sizes:
+      print 'lda',i
+      lda_dict[i] = digits(linear=True,training_set_size=i,f=f)
+      print 'qda',i
+      qda_dict[i] = digits(linear=False,training_set_size=i,f=f)
 
   log_sz = np.log(np.array(tr_sizes))
   plt.figure()
