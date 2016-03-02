@@ -175,10 +175,10 @@ def plot_sigma(sigma,name = ''):
   # plt.pcolor(sigma)
   # plt.savefig('out/5C' + str(name) + '.png')
 
-def digits(linear=False,plot=False,smallplot=True):
+def digits(linear=False,plot=False,smallplot=False,training_set_size=50000,f=None,test=False):
   ''' Does digits automatically '''
-  NUM_TRAIN = 50000
-  NUM_VAL = 1000
+  NUM_TRAIN = training_set_size
+  NUM_VAL = 10000
   train_img,train_lab,test_img = load_data_digits()
   train_img = normalize(train_img)
   
@@ -186,8 +186,8 @@ def digits(linear=False,plot=False,smallplot=True):
   v_img,v_lab = (train_samples[0][NUM_TRAIN:],train_samples[1][NUM_TRAIN:])
   train_samples = (train_samples[0][:NUM_TRAIN],train_samples[1][:NUM_TRAIN])
   train_df = make_df(train_samples)
+  global Sigmas,sigmas,mus
   mus = find_average(train_df)
-  global Sigmas,sigmas
   sigmas = find_sigmas(train_df)
   Sigmas = sigmas
   if linear:
@@ -201,7 +201,10 @@ def digits(linear=False,plot=False,smallplot=True):
   # v_img,v_lab = get_samples(NUM_VAL,train_img,train_lab)
   predicted = classify_multi(v_img,classifiers,list(set(train_lab)))
   # predicted = parallel_multi(v_img,list(set(train_lab)),mus,sigmas)
-  print 'error rate:',(np.sum(predicted != v_lab))/float(NUM_VAL)
+  if f is None:
+    print 'error rate:',(np.sum(predicted != v_lab))/float(NUM_VAL)
+  else:
+    f.write(str(NUM_TRAIN) + ',' + str((np.sum(predicted != v_lab))/float(NUM_VAL)) + '\n')
 
   if plot:
     map(plot_sigma,sigmas.values()[:2],xrange(2))
@@ -209,17 +212,20 @@ def digits(linear=False,plot=False,smallplot=True):
     plt.pcolor(train_img[30000].reshape(28,28),cmap=plt.cm.Blues)
     plt.savefig('out/ex.png')
 
-  test_img = normalize(test_img)
-  test_predicted = classify_multi(test_img,classifiers,list(set(train_lab)))
-  # test_predicted = parallel_multi(test_img,list(set(train_lab)),mus,sigmas)
+  if test:
+    test_img = normalize(test_img)
+    test_predicted = classify_multi(test_img,classifiers,list(set(train_lab)))
+    # test_predicted = parallel_multi(test_img,list(set(train_lab)),mus,sigmas)
 
-  # For interactive
-  global test_out
-  test_out = pd.DataFrame(test_predicted)
-  test_out.columns = ['category']
-  test_out.index = test_out.index + 1
-  test_out.index.names = ['id']
-  test_out.to_csv('out/digits.csv')
+    # For interactive
+    global test_out
+    test_out = pd.DataFrame(test_predicted)
+    test_out.columns = ['category']
+    test_out.index = test_out.index + 1
+    test_out.index.names = ['id']
+    test_out.to_csv('out/digits.csv')
+
+  return (np.sum(predicted != v_lab))/float(NUM_VAL)
 
 def spam(linear=True):
   NUM_TRAIN = 4172
@@ -228,6 +234,7 @@ def spam(linear=True):
   train_img,train_lab,test_img = load_data_spam()
   
   global train_df
+  global sigmas,mus
   train_samples = get_samples(NUM_TRAIN+NUM_VAL,train_img,train_lab)
   v_img,v_lab = (train_samples[0][NUM_TRAIN:],train_samples[1][NUM_TRAIN:])
   train_samples = (train_samples[0][:NUM_TRAIN],train_samples[1][:NUM_TRAIN])
@@ -268,6 +275,21 @@ def spam(linear=True):
 
 def main():
   print 'what'
+  tr_sizes = [100,200,500,1000,2000,5000,10000,30000,50000]
+  lda_dict = dict()
+  qda_dict = dict()
+  for i in tr_sizes:
+    lda_dict[i] = digits(linear=True,training_set_size=i)
+    qda_dict[i] = digits(linear=False,training_set_size=i)
+
+  log_sz = np.log(np.array(tr_sizes))
+  plt.figure()
+  plt.plot(log_sz, [lda_dict[i] for i in tr_sizes])
+  plt.savefig('out/5D1.png')
+
+  plt.figure()
+  plt.plot(log_sz, [qda_dict[i] for i in tr_sizes])
+  plt.savefig('out/5D2.png')
   # digits()
   # spam()
 
