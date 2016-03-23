@@ -1,0 +1,38 @@
+Notes:
+Make sure there's an output folder called 'out' in the directory. Nothing will work if this
+folder does not exist. The dataset for 5 and 6 should be in 'data/(whatever_dataset)' in the 
+path from wherever you run the code.
+
+Problem 2:
+Running
+
+  python p2.py
+
+should be sufficient. Outputs are in the folder 'out'.
+
+Problem 3:
+Running
+
+  python p3.py
+
+should be sufficient. Outputs are in the folder 'out'.
+
+Problem 5:
+Running
+
+  python p5.py
+
+should give some of the expected outputs in the folder 'out'.
+Unfortunately I did not document this file very well so I am unsure whether or not all
+the subparts are adequately outputted, but it should be close. Please email me at
+  
+  ys@berkeley.edu
+
+for any confusion. Make sure your computer has the Pandas package installed.
+
+Problem 6:
+Running
+
+  python p6.py
+
+should be sufficient. Outputs are in the folder 'out'.

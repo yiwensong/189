@@ -293,8 +293,8 @@ def main():
   plt.figure()
   plt.plot(log_sz, [qda_dict[i] for i in tr_sizes])
   plt.savefig('out/5D2.png')
-  # digits()
-  # spam()
+  digits()
+  spam()
 
 
   # Uncomment when done debugging

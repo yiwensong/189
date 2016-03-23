@@ -1,0 +1,4 @@
+housing_dataset/*
+spam_dataset/*
+out
+*.pyc
