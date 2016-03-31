@@ -1,0 +1,12 @@
+Problem 1:
+  1. put housing dataset in './housing_dataset/'
+  2. make sure there's a folder './out'
+  3. python2 p1.py
+
+Problem 2:
+  1. python2 p2.py
+
+Problem 3:
+  1. put data into './spam_dataset/'
+  2. make sure there's a folder './out'
+  3. python2 p3.py
