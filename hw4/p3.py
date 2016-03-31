@@ -229,17 +229,17 @@ def spam():
   X = train_img
   y = train_lab
 
-  # train_plot_stoch(X,y,pre=preprocess_normalize,name='3a_norm_stoch')
-  # train_plot_stoch(X,y,pre=preprocess_log,name='3a_log_stoch')
-  # train_plot_stoch(X,y,pre=preprocess_bin,name='3a_bin_stoch')
+  train_plot_stoch(X,y,pre=preprocess_normalize,name='3a_norm_stoch')
+  train_plot_stoch(X,y,pre=preprocess_log,name='3a_log_stoch')
+  train_plot_stoch(X,y,pre=preprocess_bin,name='3a_bin_stoch')
 
-  # train_plot_batch(X,y,pre=preprocess_normalize,name='3a_norm_batch')
-  # train_plot_batch(X,y,pre=preprocess_log,name='3a_log_batch')
-  # train_plot_batch(X,y,pre=preprocess_bin,name='3a_bin_batch')
-  # 
-  # train_plot_stoch(X,y,pre=preprocess_normalize,name='3a_norm_vtr',vtr=True)
-  # train_plot_stoch(X,y,pre=preprocess_log,name='3a_log_vtr',vtr=True)
-  # train_plot_stoch(X,y,pre=preprocess_bin,name='3a_bin_vtr',vtr=True)
+  train_plot_batch(X,y,pre=preprocess_normalize,name='3a_norm_batch')
+  train_plot_batch(X,y,pre=preprocess_log,name='3a_log_batch')
+  train_plot_batch(X,y,pre=preprocess_bin,name='3a_bin_batch')
+  
+  train_plot_stoch(X,y,pre=preprocess_normalize,name='3a_norm_vtr',vtr=True)
+  train_plot_stoch(X,y,pre=preprocess_log,name='3a_log_vtr',vtr=True)
+  train_plot_stoch(X,y,pre=preprocess_bin,name='3a_bin_vtr',vtr=True)
 
   best_rho = 1
   bestR = None
