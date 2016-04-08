@@ -8,6 +8,11 @@ from scipy import io as sio
 import random
 from multiprocessing import Pool
 
+NUM_PROCS = 2
+MAX_LEVELS = 10
+FOREST_DENSITY = 40
+POINTS_PER_TREE_RATIO = 5000
+
 def data_cleanup(dataframe):
   for c in dataframe.columns:
     if dataframe[c].dtype == 'O':
@@ -113,7 +118,6 @@ class tree_node:
       ret = self.traverse_obj(data)
     return ret
 
-MAX_LEVELS = 10
 
 def train_tree(dataframe,level=0):
   if level >= MAX_LEVELS:
@@ -174,28 +178,26 @@ def make_results_csv(test_results,thing):
 
 def random_columns(dataframe):
   entries = dataframe.columns
-  new_cols = []
-  for e in entries:
-    r = random.random()
-    if r < .9 or e == 'label':
-      new_cols.append(e)
+  entries = filter(lambda n: n != 'label',entries)
+  new_cols = np.array(entries)
+  random.shuffle(new_cols)
+  new_cols = new_cols[:int(np.ceil(np.sqrt(len(new_cols))))]
+  new_cols = np.concatenate((new_cols,['label']))
   return new_cols
 
 def random_points(dataframe,n):
   return map(lambda i: random.randint(0,dataframe.shape[0]-1),xrange(n))
 
-FOREST_DENSITY = 40
-POINTS_PER_TREE_RATIO = 5000
 def generate_and_train(dataframe,col_bag=True,data_bag=True):
   if col_bag:
     new_cols = random_columns(dataframe)
   if data_bag:
-    dataframe = dataframe.iloc[random_points(dataframe,POINTS_PER_TREE_RATIO)]
+    dataframe = dataframe.iloc[random_points(dataframe,dataframe.shape[0])]
   print 'training tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),new_cols)
   return (new_cols,train_tree(dataframe[new_cols]))
 
 def train_random_forest(dataframe):
-  pool = Pool(processes=8)
+  pool = Pool(processes=NUM_PROCS)
   forest = pool.map(generate_and_train,[dataframe] * FOREST_DENSITY)
   return forest
 
@@ -208,7 +210,7 @@ def get_label_partial_tree(tree,dataset,cols):
   print 'getting labels for tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),cols)
   cols = filter(lambda i: True if i != 'label' else False,cols)
   args = map(lambda i: (tree,dataset[cols].iloc[i]),xrange(dataset.shape[0]))
-  pool = Pool(processes=8)
+  pool = Pool(processes=NUM_PROCS)
   parallel_return = pool.map(get_label_tree_pass,args)
   return np.array(parallel_return)
 
@@ -295,8 +297,9 @@ def spam_forest():
   results_df = make_results_csv(test_results,'spam')
 
 def main():
-  census_forest()
-  spam_forest()
+  pass
+  # census_forest()
+  # spam_forest()
 
 if __name__=='__main__':
   main()
