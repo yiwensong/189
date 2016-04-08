@@ -3,7 +3,10 @@
 import numpy as np
 import pandas as pd
 
+from scipy import io as sio
+
 import random
+from multiprocessing import Pool
 
 def data_cleanup(dataframe):
   for c in dataframe.columns:
@@ -41,7 +44,7 @@ def nonnumeric_split(dataframe,feature,group):
   return h,geq,let
 
 def best_split(dataframe):
-  print 'best_split size of input',dataframe.shape[0]
+  # print 'best_split size of input',dataframe.shape[0]
   labels = dataframe['label']
   not_labels = np.array(filter(lambda l: l != 'label',dataframe.columns))
 
@@ -110,7 +113,7 @@ class tree_node:
       ret = self.traverse_obj(data)
     return ret
 
-MAX_LEVELS = 4
+MAX_LEVELS = 10
 
 def train_tree(dataframe,level=0):
   if level >= MAX_LEVELS:
@@ -124,11 +127,14 @@ def train_tree(dataframe,level=0):
     return leaf
   feature,value,_,pos,neg = best_split(dataframe)
   if pos.shape[0] == 0 or neg.shape[0] == 0:
-    majority = dataframe['label'].mode()[0]
+    try:
+      majority = dataframe['label'].mode()[0]
+    except:
+      return tree_node(None,None,random.randint(0,1),None,None)
     leaf = tree_node(None,None,majority,None,None)
     return leaf
 
-  print 'level',level,'node splitting',feature,'at',value
+  # print 'level',level,'node splitting',feature,'at',value
   if np.average(pos['label']) == 0:
     left = tree_node(None,None,0,None,None)
   elif np.average(pos['label']) == 1:
@@ -150,6 +156,147 @@ def train_tree(dataframe,level=0):
 def get_label_tree(tree,data):
   return tree.traverse(data)
 
-train = pd.DataFrame.from_csv('census_data/train_data.csv')
-train = train[train.columns[train.columns != 'fnlwgt']]
-tree = train_tree(train)
+def get_train_validate(dataframe):
+  n = dataframe.shape[0]
+  indices = range(n)
+  random.shuffle(indices)
+  train = dataframe.iloc[indices[:2*n/3]]
+  validate = dataframe.iloc[indices[2*n/3:]]
+  return train,validate
+
+def make_results_csv(test_results,thing):
+  results_df = pd.DataFrame.from_dict(test_results)
+  results_df.columns = np.array(['category'])
+  results_df.index.name = 'id'
+  results_df.index = results_df.index + 1
+  results_df.to_csv('out/' + thing + '.csv')
+  return results_df
+
+def random_columns(dataframe):
+  entries = dataframe.columns
+  new_cols = []
+  for e in entries:
+    r = random.random()
+    if r < .9 or e == 'label':
+      new_cols.append(e)
+  return new_cols
+
+def random_points(dataframe,n):
+  return map(lambda i: random.randint(0,dataframe.shape[0]-1),xrange(n))
+
+FOREST_DENSITY = 40
+POINTS_PER_TREE_RATIO = 5000
+def generate_and_train(dataframe,col_bag=True,data_bag=True):
+  if col_bag:
+    new_cols = random_columns(dataframe)
+  if data_bag:
+    dataframe = dataframe.iloc[random_points(dataframe,POINTS_PER_TREE_RATIO)]
+  print 'training tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),new_cols)
+  return (new_cols,train_tree(dataframe[new_cols]))
+
+def train_random_forest(dataframe):
+  pool = Pool(processes=8)
+  forest = pool.map(generate_and_train,[dataframe] * FOREST_DENSITY)
+  return forest
+
+def get_label_tree_pass(arg):
+  tree = arg[0]
+  data = arg[1]
+  return get_label_tree(tree,data)
+
+def get_label_partial_tree(tree,dataset,cols):
+  print 'getting labels for tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),cols)
+  cols = filter(lambda i: True if i != 'label' else False,cols)
+  args = map(lambda i: (tree,dataset[cols].iloc[i]),xrange(dataset.shape[0]))
+  pool = Pool(processes=8)
+  parallel_return = pool.map(get_label_tree_pass,args)
+  return np.array(parallel_return)
+
+def get_label_forest(forest,data):
+  labels = np.array(map(lambda i: get_label_partial_tree(forest[i][1],data,forest[i][0]),xrange(len(forest))))
+  labels = np.average(labels,axis=0)
+  return labels
+
+def census():
+  train = pd.DataFrame.from_csv('census_data/train_data.csv')
+  train = train[train.columns[train.columns != 'fnlwgt']]
+  train,validate = get_train_validate(train)
+  tree = train_tree(train)
+  
+  get_lab = lambda i: get_label_tree(tree,validate.iloc[i])
+  results = map(get_lab,xrange(validate.shape[0]))
+  
+  score = np.sum(results == validate['label'])/float(validate.shape[0])
+  print 'validation correct rate:',score
+  
+  test = pd.DataFrame.from_csv('census_data/test_data.csv')
+  get_lab_test = lambda i: get_label_tree(tree,test.iloc[i])
+  test_results = map(get_lab_test,xrange(test.shape[0]))
+  results_df = make_results_csv(test_results,'census')
+
+def spam():
+  spams = sio.loadmat('spam-dataset/spam_data.mat')
+  train = spams['training_data']
+  label = spams['training_labels']
+  test = spams['test_data']
+  train = pd.DataFrame(train)
+  train['label'] = label.T
+  
+  train,validate = get_train_validate(train)
+  tree = train_tree(train)
+  
+  get_lab = lambda i: get_label_tree(tree,validate.iloc[i])
+  results = map(get_lab,xrange(validate.shape[0]))
+  
+  score = np.sum(results == validate['label'])/float(validate.shape[0])
+  print 'validation correct rate:',score
+  
+  test = pd.DataFrame(test)
+  get_lab_test = lambda i: get_label_tree(tree,test.iloc[i])
+  test_results = map(get_lab_test,xrange(test.shape[0]))
+  results_df = make_results_csv(test_results,'spam')
+
+def census_forest():
+  global train,validate
+  train = pd.DataFrame.from_csv('census_data/train_data.csv')
+  train = train[train.columns[train.columns != 'fnlwgt']]
+  train,validate = get_train_validate(train)
+  global forest
+  forest = train_random_forest(train)
+  
+  global results
+  results = get_label_forest(forest,validate)
+  
+  score = np.sum(results == validate['label'])/float(validate.shape[0])
+  print 'validation correct rate:',score
+  
+  test = pd.DataFrame.from_csv('census_data/test_data.csv')
+  test_results = get_label_forest(forest,test)
+  results_df = make_results_csv(test_results,'census')
+
+def spam_forest():
+  spams = sio.loadmat('spam-dataset/spam_data.mat')
+  train = spams['training_data']
+  label = spams['training_labels']
+  test = spams['test_data']
+  train = pd.DataFrame(train)
+  train['label'] = label.T
+  
+  train,validate = get_train_validate(train)
+  forest = train_random_forest(train)
+  
+  results = get_label_forest(forest,validate)
+  
+  score = np.sum(results == validate['label'])/float(validate.shape[0])
+  print 'validation correct rate:',score
+  
+  test = pd.DataFrame(test)
+  test_results = get_label_forest(forest,test)
+  results_df = make_results_csv(test_results,'spam')
+
+def main():
+  census_forest()
+  spam_forest()
+
+if __name__=='__main__':
+  main()
