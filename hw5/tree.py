@@ -5,11 +5,12 @@ import pandas as pd
 
 from scipy import io as sio
 
+import argparse
 import random
 from multiprocessing import Pool
 import os
 
-NUM_PROCS = 8
+NUM_PROCS = 6
 MAX_LEVELS = 10000
 CENSUS_FOREST_DENSITY = 100
 SPAM_FOREST_DENSITY = 1000
@@ -213,6 +214,7 @@ def train_validate_check_forest(data):
 
 def forest(train,validate,test,FOREST_DENSITY):
   global v,t,output
+  # pool = Pool(processes=NUM_PROCS)
   output = map(train_validate_check_forest,[(train,validate,test)] * FOREST_DENSITY)
   v = [''] * FOREST_DENSITY
   t = [''] * FOREST_DENSITY
@@ -328,8 +330,27 @@ def spam_forest():
   results_df = make_results_csv(test_results,'spam')
 
 def main():
-  # census_results = census_forest()
-  spam_results = spam_forest()
+  parser = argparse.ArgumentParser()
+  parse.add_argument('-c','--censusforest',help='do census forest',action='store_true')
+  parse.add_argument('-s','--spamforest',help='do spam forest',action='store_true')
+  parse.add_argument('-C','--censustree',help='do census tree',action='store_true')
+  parse.add_argument('-S','--spamtree',help='do spam tree',action='store_true')
+
+  args = parser.parse_args()
+  
+  global census_results,census_tree_results,spam_results,spam_tree_results
+
+  if args.censusforest:
+    census_results = census_forest()
+
+  if args.spamforest:
+    spam_results = spam_forest()
+
+  if args.censustree:
+    census_tree_results = census()
+
+  if args.spamtree:
+    spam_tree_results = spam()
 
 
 if __name__=='__main__':
