@@ -9,8 +9,8 @@ import random
 from multiprocessing import Pool
 
 NUM_PROCS = 2
-MAX_LEVELS = 10
-FOREST_DENSITY = 40
+MAX_LEVELS = 1000
+FOREST_DENSITY = 100
 POINTS_PER_TREE_RATIO = 5000
 
 def data_cleanup(dataframe):
@@ -188,36 +188,60 @@ def random_columns(dataframe):
 def random_points(dataframe,n):
   return map(lambda i: random.randint(0,dataframe.shape[0]-1),xrange(n))
 
-def generate_and_train(dataframe,col_bag=True,data_bag=True):
-  if col_bag:
-    new_cols = random_columns(dataframe)
-  if data_bag:
-    dataframe = dataframe.iloc[random_points(dataframe,dataframe.shape[0])]
-  print 'training tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),new_cols)
-  return (new_cols,train_tree(dataframe[new_cols]))
+def forest_tree(dataframe):
+  xs = random_points(dataframe,dataframe.shape[0])
+  ys = random_columns(dataframe)
+  dataframe = dataframe.iloc[xs][ys]
+  tree = train_tree(dataframe)
+  print 'making a tree in forest!',ys
+  return tree
 
-def train_random_forest(dataframe):
+def train_validate_check_forest(data):
+  train = data[0]
+  validate = data[1]
+  test = data[2]
+  tree = forest_tree(train)
+  label_v = lambda i: get_label_tree(tree,validate.iloc[i])
+  label_t = lambda i: get_label_tree(tree,test.iloc[i])
+  validate_results = map(label_v,xrange(validate.shape[0]))
+  test_results = map(label_t,xrange(test.shape[0]))
+  return [validate_results,test_results]
+
+def forest(train,validate,test,pool):
   pool = Pool(processes=NUM_PROCS)
-  forest = pool.map(generate_and_train,[dataframe] * FOREST_DENSITY)
-  return forest
+  output = pool.map(train_validate_check_forest,[(train,validate,test)] * FOREST_DENSITY)
+  return np.array(output)
 
-def get_label_tree_pass(arg):
-  tree = arg[0]
-  data = arg[1]
-  return get_label_tree(tree,data)
-
-def get_label_partial_tree(tree,dataset,cols):
-  print 'getting labels for tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),cols)
-  cols = filter(lambda i: True if i != 'label' else False,cols)
-  args = map(lambda i: (tree,dataset[cols].iloc[i]),xrange(dataset.shape[0]))
-  pool = Pool(processes=NUM_PROCS)
-  parallel_return = pool.map(get_label_tree_pass,args)
-  return np.array(parallel_return)
-
-def get_label_forest(forest,data):
-  labels = np.array(map(lambda i: get_label_partial_tree(forest[i][1],data,forest[i][0]),xrange(len(forest))))
-  labels = np.average(labels,axis=0)
-  return labels
+# def generate_and_train(dataframe,col_bag=True,data_bag=True):
+#   if col_bag:
+#     new_cols = random_columns(dataframe)
+#   if data_bag:
+#     dataframe = dataframe.iloc[random_points(dataframe,dataframe.shape[0])]
+#   print 'training tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),new_cols)
+#   return (new_cols,train_tree(dataframe[new_cols]))
+# 
+# def train_random_forest(dataframe):
+#   pool = Pool(processes=NUM_PROCS)
+#   forest = pool.map(generate_and_train,[dataframe] * FOREST_DENSITY)
+#   return forest
+# 
+# def get_label_tree_pass(arg):
+#   tree = arg[0]
+#   data = arg[1]
+#   return get_label_tree(tree,data)
+# 
+# def get_label_partial_tree(tree,dataset,cols):
+#   print 'getting labels for tree with columns:',reduce(lambda a,b: str(a) + ', ' + str(b),cols)
+#   cols = filter(lambda i: True if i != 'label' else False,cols)
+#   args = map(lambda i: (tree,dataset[cols].iloc[i]),xrange(dataset.shape[0]))
+#   pool = Pool(processes=NUM_PROCS)
+#   parallel_return = pool.map(get_label_tree_pass,args)
+#   return np.array(parallel_return)
+# 
+# def get_label_forest(forest,data):
+#   labels = np.array(map(lambda i: get_label_partial_tree(forest[i][1],data,forest[i][0]),xrange(len(forest))))
+#   labels = np.average(labels,axis=0)
+#   return labels
 
 def census():
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
@@ -259,22 +283,22 @@ def spam():
   results_df = make_results_csv(test_results,'spam')
 
 def census_forest():
-  global train,validate
+  global train,validate,test
+  global results,test_results
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
-  global forest
-  forest = train_random_forest(train)
-  
-  global results
-  results = get_label_forest(forest,validate)
-  
-  score = np.sum(results == validate['label'])/float(validate.shape[0])
-  print 'validation correct rate:',score
-  
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
-  test_results = get_label_forest(forest,test)
-  results_df = make_results_csv(test_results,'census')
+  # global forest
+  # forest = train_random_forest(train)
+  # 
+  # results = get_label_forest(forest,validate)
+  # 
+  # score = np.sum(results == validate['label'])/float(validate.shape[0])
+  # print 'validation correct rate:',score
+  # 
+  # test_results = get_label_forest(forest,test)
+  # results_df = make_results_csv(test_results,'census')
 
 def spam_forest():
   spams = sio.loadmat('spam-dataset/spam_data.mat')
@@ -285,16 +309,16 @@ def spam_forest():
   train['label'] = label.T
   
   train,validate = get_train_validate(train)
-  forest = train_random_forest(train)
-  
-  results = get_label_forest(forest,validate)
-  
-  score = np.sum(results == validate['label'])/float(validate.shape[0])
-  print 'validation correct rate:',score
-  
-  test = pd.DataFrame(test)
-  test_results = get_label_forest(forest,test)
-  results_df = make_results_csv(test_results,'spam')
+  # forest = train_random_forest(train)
+  # 
+  # results = get_label_forest(forest,validate)
+  # 
+  # score = np.sum(results == validate['label'])/float(validate.shape[0])
+  # print 'validation correct rate:',score
+  # 
+  # test = pd.DataFrame(test)
+  # test_results = get_label_forest(forest,test)
+  # results_df = make_results_csv(test_results,'spam')
 
 def main():
   pass
