@@ -7,10 +7,12 @@ from scipy import io as sio
 
 import random
 from multiprocessing import Pool
+import os
 
-NUM_PROCS = 2
-MAX_LEVELS = 1000
-FOREST_DENSITY = 100
+NUM_PROCS = 8
+MAX_LEVELS = 10000
+CENSUS_FOREST_DENSITY = 100
+SPAM_FOREST_DENSITY = 1000
 POINTS_PER_TREE_RATIO = 5000
 
 def data_cleanup(dataframe):
@@ -92,6 +94,8 @@ class tree_node:
     return left,right
 
   def traverse_numeric(self,data):
+    global d
+    d = data
     if data[self.feature] >= self.value:
       # go left
       ret = self.left.traverse(data)
@@ -191,9 +195,9 @@ def random_points(dataframe,n):
 def forest_tree(dataframe):
   xs = random_points(dataframe,dataframe.shape[0])
   ys = random_columns(dataframe)
+  print 'making a tree in forest!',ys
   dataframe = dataframe.iloc[xs][ys]
   tree = train_tree(dataframe)
-  print 'making a tree in forest!',ys
   return tree
 
 def train_validate_check_forest(data):
@@ -205,12 +209,19 @@ def train_validate_check_forest(data):
   label_t = lambda i: get_label_tree(tree,test.iloc[i])
   validate_results = map(label_v,xrange(validate.shape[0]))
   test_results = map(label_t,xrange(test.shape[0]))
-  return [validate_results,test_results]
+  return np.array(validate_results),np.array(test_results)
 
-def forest(train,validate,test,pool):
-  pool = Pool(processes=NUM_PROCS)
-  output = pool.map(train_validate_check_forest,[(train,validate,test)] * FOREST_DENSITY)
-  return np.array(output)
+def forest(train,validate,test,FOREST_DENSITY):
+  global v,t,output
+  output = map(train_validate_check_forest,[(train,validate,test)] * FOREST_DENSITY)
+  v = [''] * FOREST_DENSITY
+  t = [''] * FOREST_DENSITY
+  for i in xrange(FOREST_DENSITY):
+    v[i] = output[i][0]
+    t[i] = output[i][1]
+  v_res = np.array(np.average(v,axis=0) * 2,dtype='int')
+  t_res = np.array(np.average(v,axis=0) * 2,dtype='int')
+  return v_res,t_res
 
 # def generate_and_train(dataframe,col_bag=True,data_bag=True):
 #   if col_bag:
@@ -289,41 +300,37 @@ def census_forest():
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
-  # global forest
-  # forest = train_random_forest(train)
-  # 
-  # results = get_label_forest(forest,validate)
-  # 
-  # score = np.sum(results == validate['label'])/float(validate.shape[0])
-  # print 'validation correct rate:',score
-  # 
-  # test_results = get_label_forest(forest,test)
-  # results_df = make_results_csv(test_results,'census')
+  
+  results,test_results = forest(train,validate,test,CENSUS_FOREST_DENSITY)
+  score = np.sum(results == validate['label'])/float(validate.shape[0])
+  print 'validation correct rate:',score
+  results_df = make_results_csv(test_results,'census')
 
 def spam_forest():
+  global train,validate,test
+  global results,test_results
   spams = sio.loadmat('spam-dataset/spam_data.mat')
   train = spams['training_data']
   label = spams['training_labels']
   test = spams['test_data']
+  test = pd.DataFrame(test)
   train = pd.DataFrame(train)
   train['label'] = label.T
-  
   train,validate = get_train_validate(train)
-  # forest = train_random_forest(train)
-  # 
-  # results = get_label_forest(forest,validate)
-  # 
-  # score = np.sum(results == validate['label'])/float(validate.shape[0])
-  # print 'validation correct rate:',score
-  # 
-  # test = pd.DataFrame(test)
-  # test_results = get_label_forest(forest,test)
-  # results_df = make_results_csv(test_results,'spam')
+
+  train.columns = np.array(train.columns,dtype='|S21')
+  validate.columns = np.array(validate.columns,dtype='|S21')
+  test.columns = np.array(test.columns,dtype='|S21')
+
+  results,test_results = forest(train,validate,test,SPAM_FOREST_DENSITY)
+  score = np.sum(results == validate['label'])/float(validate.shape[0])
+  print 'validation correct rate:',score
+  results_df = make_results_csv(test_results,'spam')
 
 def main():
-  pass
-  # census_forest()
-  # spam_forest()
+  # census_results = census_forest()
+  spam_results = spam_forest()
+
 
 if __name__=='__main__':
   main()
