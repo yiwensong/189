@@ -331,10 +331,10 @@ def spam_forest():
 
 def main():
   parser = argparse.ArgumentParser()
-  parse.add_argument('-c','--censusforest',help='do census forest',action='store_true')
-  parse.add_argument('-s','--spamforest',help='do spam forest',action='store_true')
-  parse.add_argument('-C','--censustree',help='do census tree',action='store_true')
-  parse.add_argument('-S','--spamtree',help='do spam tree',action='store_true')
+  parser.add_argument('-c','--censusforest',help='do census forest',action='store_true')
+  parser.add_argument('-s','--spamforest',help='do spam forest',action='store_true')
+  parser.add_argument('-C','--censustree',help='do census tree',action='store_true')
+  parser.add_argument('-S','--spamtree',help='do spam tree',action='store_true')
 
   args = parser.parse_args()
   
