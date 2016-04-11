@@ -94,33 +94,38 @@ class tree_node:
       _,left,right = nonnumeric_split(dataframe,self.feature,self.value)
     return left,right
 
-  def traverse_numeric(self,data):
+  def traverse_numeric(self,data,verbose=False):
     global d
     d = data
     if data[self.feature] >= self.value:
       # go left
-      ret = self.left.traverse(data)
+      ret = self.left.traverse(data,verbose)
     else:
       # go right
-      ret = self.right.traverse(data)
+      ret = self.right.traverse(data,verbose)
     return ret
 
-  def traverse_obj(self,data):
+  def traverse_obj(self,data,verbose=False):
     if data[self.feature] == self.value:
       # go left
-      ret = self.left.traverse(data)
+      ret = self.left.traverse(data,verbose)
     else:
       # go right
-      ret = self.right.traverse(data)
+      ret = self.right.traverse(data,verbose)
     return ret
 
-  def traverse(self,data):
+  def traverse(self,data,verbose=False):
+    if verbose:
+      try:
+        print 'going to:',self.feature,self.value,data[self.feature]
+      except:
+        print 'leafed! it\'s a',self.value
     if self.feature_type is None:
       return self.value
     elif self.feature_type != 'O':
-      ret = self.traverse_numeric(data)
+      ret = self.traverse_numeric(data,verbose)
     else:
-      ret = self.traverse_obj(data)
+      ret = self.traverse_obj(data,verbose)
     return ret
 
 
@@ -216,7 +221,7 @@ def train_validate_check_forest(data):
   label_t = lambda i: get_label_tree(tree,test.iloc[i])
   validate_results = map(label_v,xrange(validate.shape[0]))
   test_results = map(label_t,xrange(test.shape[0]))
-  return np.array(validate_results),np.array(test_results)
+  return np.array(validate_results),np.array(test_results),(tree.feature,tree.value)
 
 def forest(train,validate,test,FOREST_DENSITY):
   global v,t,output
@@ -224,17 +229,22 @@ def forest(train,validate,test,FOREST_DENSITY):
   output = map(train_validate_check_forest,[(train,validate,test)] * FOREST_DENSITY)
   v = [''] * FOREST_DENSITY
   t = [''] * FOREST_DENSITY
+  featval = [''] * FOREST_DENSITY
   for i in xrange(FOREST_DENSITY):
     v[i] = output[i][0]
     t[i] = output[i][1]
+    featval[i] = output[i][2]
   v_res = np.array(np.round(np.average(v,axis=0)),dtype='int')
   t_res = np.array(np.round(np.average(t,axis=0)),dtype='int')
-  return v_res,t_res
+  return v_res,t_res,featval
 
 def census():
+  global censuses
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
+  censuses = train
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
+  global tree
   tree = train_tree(train)
   
   get_lab = lambda i: get_label_tree(tree,validate.iloc[i])
@@ -250,6 +260,7 @@ def census():
   return results_df
 
 def spam():
+  global train
   spams = sio.loadmat('spam-dataset/spam_data.mat')
   train = spams['training_data']
   label = spams['training_labels']
@@ -258,6 +269,7 @@ def spam():
   train['label'] = label.T
   
   train,validate = get_train_validate(train)
+  global tree
   tree = train_tree(train)
   
   get_lab = lambda i: get_label_tree(tree,validate.iloc[i])
@@ -280,7 +292,10 @@ def census_forest():
   train,validate = get_train_validate(train)
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
   
-  results,test_results = forest(train,validate,test,CENSUS_FOREST_DENSITY)
+  results,test_results,top_splits = forest(train,validate,test,CENSUS_FOREST_DENSITY)
+  with open('out/census_forest.out','w') as f:
+    for split in top_splits:
+        f.write(split[0] + ',' + str(split[1]) + '\n')
   score = np.sum(results == validate['label'])/float(validate.shape[0])
   print 'validation correct rate:',score
   results_df = make_results_csv(test_results,'census')
@@ -302,7 +317,10 @@ def spam_forest():
   validate.columns = np.array(validate.columns,dtype='|S21')
   test.columns = np.array(test.columns,dtype='|S21')
 
-  results,test_results = forest(train,validate,test,SPAM_FOREST_DENSITY)
+  results,test_results,top_splits = forest(train,validate,test,SPAM_FOREST_DENSITY)
+  with open('out/spam_forest.out','w') as f:
+    for split in top_splits:
+        f.write(split[0] + ',' + str(split[1]) + '\n')
   score = np.sum(results == validate['label'])/float(validate.shape[0])
   print 'validation correct rate:',score
   results_df = make_results_csv(test_results,'spam')
