@@ -1,0 +1,13 @@
+spam tree:
+  python2 tree.py -S
+
+census tree:
+  python2 tree.py -C
+
+spam forest:
+  python2 tree.py -s
+
+census forest:
+  python2 tree.py -c
+
+make sure you have anaconda installed (Pandas is the big one)
