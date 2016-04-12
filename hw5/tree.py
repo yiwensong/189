@@ -250,7 +250,7 @@ def forest(train,validate,test,FOREST_DENSITY):
   t_res = np.array(np.round(np.sum(t,axis=0)),dtype='int')
   return v_res,t_res,featval
 
-def census():
+def census(target='census'):
   global censuses
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
   censuses = train
@@ -268,10 +268,10 @@ def census():
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
   get_lab_test = lambda i: get_label_tree(tree,test.iloc[i])
   test_results = map(get_lab_test,xrange(test.shape[0]))
-  results_df = make_results_csv(test_results,'census')
+  results_df = make_results_csv(test_results,target)
   return results_df
 
-def spam():
+def spam(target='spam'):
   global train
   spams = sio.loadmat('spam-dataset/spam_data.mat')
   train = spams['training_data']
@@ -293,10 +293,10 @@ def spam():
   test = pd.DataFrame(test)
   get_lab_test = lambda i: get_label_tree(tree,test.iloc[i])
   test_results = map(get_lab_test,xrange(test.shape[0]))
-  results_df = make_results_csv(test_results,'spam')
+  results_df = make_results_csv(test_results,target)
   return results_df
 
-def census_forest():
+def census_forest(target='census'):
   global train,validate,test
   global results,test_results
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
@@ -310,10 +310,10 @@ def census_forest():
       f.write(split[0] + ',' + str(split[1]) + '\n')
   score = np.sum(results == validate['label'])/float(validate.shape[0])
   print 'validation correct rate:',score
-  results_df = make_results_csv(test_results,'census')
+  results_df = make_results_csv(test_results,target)
   return results_df
 
-def spam_forest():
+def spam_forest(target='spam'):
   global train,validate,test
   global results,test_results
   spams = sio.loadmat('spam-dataset/spam_data.mat')
@@ -335,7 +335,7 @@ def spam_forest():
       f.write(split[0] + ',' + str(split[1]) + '\n')
   score = np.sum(results == validate['label'])/float(validate.shape[0])
   print 'validation correct rate:',score
-  results_df = make_results_csv(test_results,'spam')
+  results_df = make_results_csv(test_results,target)
   return results_df
 
 def main():
@@ -344,23 +344,36 @@ def main():
   parser.add_argument('-s','--spamforest',help='do spam forest',action='store_true')
   parser.add_argument('-C','--censustree',help='do census tree',action='store_true')
   parser.add_argument('-S','--spamtree',help='do spam tree',action='store_true')
+  parser.add_argument('-t','--target',help='output file location')
 
   args = parser.parse_args()
   
   global census_results,census_tree_results,spam_results,spam_tree_results
 
-  if args.censusforest:
-    census_results = census_forest()
+  if args.target is not None:
+    if args.censusforest:
+      census_results = census_forest(args.target)
 
-  if args.spamforest:
-    spam_results = spam_forest()
+    if args.spamforest:
+      spam_results = spam_forest(args.target)
 
-  if args.censustree:
-    census_tree_results = census()
+    if args.censustree:
+      census_tree_results = census(args.target)
 
-  if args.spamtree:
-    spam_tree_results = spam()
+    if args.spamtree:
+      spam_tree_results = spam(args.target)
+  else:
+    if args.censusforest:
+      census_results = census_forest()
 
+    if args.spamforest:
+      spam_results = spam_forest()
+
+    if args.censustree:
+      census_tree_results = census()
+
+    if args.spamtree:
+      spam_tree_results = spam()
 
 if __name__=='__main__':
   main()

@@ -25,7 +25,7 @@ def get_dict(files,cnt_weight):
         with open(fname,'r') as f:
             buf = f.read()
             words = filter(lambda a: a not in ['','a','the','to','and','is'],re.split('\W+',buf))
-            puncts = filter(lambda a: a not in [' ','\r','\n',',','.','\'','\x01',''] , re.findall('\W',buf))
+            puncts = filter(lambda a: a not in [' ','\r','\n',',','.','\'','\x01','\\',''] , re.findall('\W',buf))
             for i in (words + puncts):
                 if i in d:
                     d[i] += cnt_weight
@@ -67,7 +67,7 @@ def add_feature_function(n):
     return FCN_START + FCN_MID + FCN_END
 
 
-FEATURES_TO_USE = 200
+FEATURES_TO_USE = 1500
 
 def codegen():
     global keys,values
