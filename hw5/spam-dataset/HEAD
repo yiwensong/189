@@ -1,0 +1,38 @@
+'''
+**************** PLEASE READ ***************
+
+Script that reads in spam and ham messages and converts each training example
+into a feature vector
+
+Code intended for UC Berkeley course CS 189/289A: Machine Learning
+
+Requirements:
+-scipy ('pip install scipy')
+
+To add your own features, create a function that takes in the raw text and
+word frequency dictionary and outputs a int or float. Then add your feature
+in the function 'def generate_feature_vector'
+
+The output of your file will be a .mat file. The data will be accessible using
+the following keys:
+    -'training_data'
+    -'training_labels'
+    -'test_data'
+
+Please direct any bugs to kevintee@berkeley.edu
+'''
+
+from collections import defaultdict
+import glob
+import re
+import scipy.io
+
+NUM_TRAINING_EXAMPLES = 5172
+NUM_TEST_EXAMPLES = 5857
+
+BASE_DIR = './'
+SPAM_DIR = 'spam/'
+HAM_DIR = 'ham/'
+TEST_DIR = 'test/'
+
+# ************* Features *************
