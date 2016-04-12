@@ -17,10 +17,10 @@ CENSUS_FOREST_DENSITY = 300
 SPAM_FOREST_DENSITY = 300
 POINTS_PER_TREE_RATIO = 5000
 
-def data_cleanup(dataframe):
+def data_cleanup(dataframe,ref):
   for c in dataframe.columns:
     if dataframe[c].dtype == 'O':
-      mode = dataframe[c].mode()
+      mode = ref[c].mode()
       dataframe[c] = map(lambda s: mode if s == '?' else s,dataframe[c])
 
 def entropy(x):
@@ -253,6 +253,7 @@ def forest(train,validate,test,FOREST_DENSITY):
 def census(target='census'):
   global censuses
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
+  data_cleanup(train,train)
   censuses = train
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
@@ -266,6 +267,7 @@ def census(target='census'):
   print 'validation correct rate:',score
   
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
+  data_cleanup(test,train)
   get_lab_test = lambda i: get_label_tree(tree,test.iloc[i])
   test_results = map(get_lab_test,xrange(test.shape[0]))
   results_df = make_results_csv(test_results,target)
@@ -300,9 +302,11 @@ def census_forest(target='census'):
   global train,validate,test
   global results,test_results
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
+  data_cleanup(train,train)
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
+  data_cleanup(test,train)
   
   results,test_results,top_splits = forest(train,validate,test,CENSUS_FOREST_DENSITY)
   with open('out/census_forest.out','w') as f:
