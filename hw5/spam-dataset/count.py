@@ -1,9 +1,12 @@
 import glob
 import re
 
-spams = glob.iglob('spam/*')
-hams  = glob.iglob('ham/*')
+spams = glob.glob('spam/*')
+hams  = glob.glob('ham/*')
 OUTPUT = 'featurize2.py'
+
+NUM_SPAM = float(len(spams))
+NUM_HAM  = float(len(hams ))
 
 def dict_compare(k1,k2):
     if abs(d[k1]) < abs(d[k2]):
@@ -68,15 +71,15 @@ FEATURES_TO_USE = 200
 
 def codegen():
     global keys,values
-    _,__ = get_dict(spams,-1)
-    keys,values = get_dict(hams,1)
+    ____,______ = get_dict(spams,-1/NUM_SPAM)
+    keys,values = get_dict(hams , 1/NUM_HAM )
     
     with open(OUTPUT,'w') as f_out:
         with open('HEAD','r') as f_in:
             f_out.write(f_in.read())
         for i in xrange(FEATURES_TO_USE):
             feature = keys[i]
-            if re.match('\W+',feature) is not None:
+            if re.match('\W+',feature) is None:
                 f_out.write(generate_freq(i,feature))
             else:
                 f_out.write(generate_count(i,feature))

@@ -9,11 +9,12 @@ import argparse
 import random
 from multiprocessing import Pool
 import os
+import time
 
 NUM_PROCS = 6
 MAX_LEVELS = 10000
 CENSUS_FOREST_DENSITY = 300
-SPAM_FOREST_DENSITY = 2
+SPAM_FOREST_DENSITY = 300
 POINTS_PER_TREE_RATIO = 5000
 
 def data_cleanup(dataframe):
@@ -213,6 +214,8 @@ def forest_tree(dataframe):
   return tree
 
 def train_validate_check_forest(data):
+  start = time.clock()
+
   train = data[0]
   validate = data[1]
   test = data[2]
@@ -223,12 +226,8 @@ def train_validate_check_forest(data):
   validate_results = map(label_v,xrange(validate.shape[0]))
   test_results = map(label_t,xrange(test.shape[0]))
 
-  ada_validate = random_points(validate,validate.shape[0])
-  label_ada = lambda i: get_label_tree(tree,ada_validate.iloc[i])
-  ada_results = map(label_ada,xrange(ada_validate.shape[0]))
-  ada_score = float(np.sum(ada_results == ada_validate['label']))
-
-  return np.array(validate_results),np.array(test_results),(tree.feature,tree.value),ada_score
+  print 'time elpased:',time.clock() - start
+  return np.array(validate_results),np.array(test_results),(tree.feature,tree.value)
 
 def forest(train,validate,test,FOREST_DENSITY):
   global v,t,output
@@ -242,7 +241,7 @@ def forest(train,validate,test,FOREST_DENSITY):
     v[i] = output[i][0]
     t[i] = output[i][1]
     featval[i] = output[i][2]
-    scores[i] = output[i][3]
+    scores[i] = 1
   total_score = sum(scores)
   for i in xrange(FOREST_DENSITY):
     t[i] = np.array(t[i],dtype='float') * scores[i]/total_score
