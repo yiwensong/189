@@ -1,5 +1,6 @@
 import glob
 import re
+import string
 
 spams = glob.glob('spam/*')
 hams  = glob.glob('ham/*')
@@ -26,6 +27,8 @@ def get_dict(files,cnt_weight):
             buf = f.read()
             words = filter(lambda a: a not in ['','a','the','to','and','is'],re.split('\W+',buf))
             puncts = filter(lambda a: a not in [' ','\r','\n',',','.','\'','\x01','\\',''] , re.findall('\W',buf))
+            printable = set(string.printable)
+            puncts = filter(lambda a: a in printable,puncts)
             for i in (words + puncts):
                 if i in d:
                     d[i] += cnt_weight
