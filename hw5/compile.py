@@ -1,9 +1,11 @@
+#!/usr/bin/python2
 import pandas as pd
 import numpy as np
 
 import glob
 
-PATH = 'out/multispam/'
+PATH = 'out/multicensus/'
+OUTPUT = PATH + 'census.csv'
 
 files = glob.iglob(PATH + '*')
 
@@ -18,6 +20,6 @@ for f in files:
 
 df = np.round(df/n)
 df['category'] = np.array(df['category'],dtype='int')
-df.to_csv('out/multispam/spam.csv')
+df.to_csv(OUTPUT)
 
 print df

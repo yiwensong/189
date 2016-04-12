@@ -18,6 +18,7 @@ SPAM_FOREST_DENSITY = 300
 POINTS_PER_TREE_RATIO = 5000
 
 def data_cleanup(dataframe,ref):
+  global c
   for c in dataframe.columns:
     if dataframe[c].dtype == 'O':
       mode = ref[c].mode()
