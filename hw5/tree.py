@@ -70,10 +70,12 @@ def nonnumeric_split(dataframe,feature,group):
     h = 10000
   return h,geq,let
 
-def best_split(dataframe):
+def best_split(dataframe,columns=None):
+  if columns is None:
+    columns = dataframe.columns
   # print 'best_split size of input',dataframe.shape[0]
   labels = dataframe['label']
-  not_labels = np.array(filter(lambda l: l != 'label',dataframe.columns))
+  not_labels = np.array(filter(lambda l: l != 'label',columns))
 
   # feature name / entropy pair
   all_best_split = None
@@ -150,7 +152,9 @@ class tree_node:
 
 def train_tree(dataframe,level=0,randomize=False):
   if randomize:
-      dataframe = dataframe[random_columns(dataframe)]
+    cols = random_columns(dataframe)
+  else:
+    cols = None
   if level >= MAX_LEVELS:
     if dataframe.shape[0] == 1:
       leaf = tree_node(None,None,dataframe.label.iloc[0],None,None)
@@ -160,7 +164,7 @@ def train_tree(dataframe,level=0,randomize=False):
       return tree_node(None,None,random.randint(0,1),None,None)
     leaf = tree_node(None,None,majority,None,None)
     return leaf
-  feature,value,_,pos,neg = best_split(dataframe)
+  feature,value,_,pos,neg = best_split(dataframe,cols)
   if pos.shape[0] == 0 or neg.shape[0] == 0:
     try:
       majority = dataframe['label'].mode()[0]
