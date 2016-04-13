@@ -21,5 +21,3 @@ for f in files:
 df = np.round(df/n)
 df['category'] = np.array(df['category'],dtype='int')
 df.to_csv(OUTPUT)
-
-print df

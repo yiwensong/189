@@ -17,11 +17,28 @@ CENSUS_FOREST_DENSITY = 300
 SPAM_FOREST_DENSITY = 300
 POINTS_PER_TREE_RATIO = 5000
 
+def random_columns(dataframe):
+  entries = dataframe.columns
+  entries = filter(lambda n: n != 'label',entries)
+  new_cols = np.array(entries)
+  random.shuffle(new_cols)
+  new_cols = new_cols[:int(np.ceil(np.sqrt(len(new_cols))))]
+  new_cols = np.concatenate((new_cols,['label']))
+  return new_cols
+
+def random_points(dataframe,n):
+  df0 = dataframe[dataframe['label']==0]
+  df1 = dataframe[dataframe['label']==1]
+  num0 = map(lambda i: random.randint(0,df0.shape[0]-1),xrange(n/2))
+  num1 = map(lambda i: random.randint(0,df1.shape[0]-1),xrange(n/2))
+  sel0 = df0.iloc[num0]
+  sel1 = df1.iloc[num1]
+  return sel0.append(sel1)
+
 def data_cleanup(dataframe,ref):
-  global c
   for c in dataframe.columns:
     if dataframe[c].dtype == 'O':
-      mode = ref[c].mode()
+      mode = ref[c].mode()[0]
       dataframe[c] = map(lambda s: mode if s == '?' else s,dataframe[c])
 
 def entropy(x):
@@ -131,7 +148,9 @@ class tree_node:
     return ret
 
 
-def train_tree(dataframe,level=0):
+def train_tree(dataframe,level=0,randomize=False):
+  if randomize:
+      dataframe = dataframe[random_columns(dataframe)]
   if level >= MAX_LEVELS:
     if dataframe.shape[0] == 1:
       leaf = tree_node(None,None,dataframe.label.iloc[0],None,None)
@@ -156,14 +175,14 @@ def train_tree(dataframe,level=0):
   elif np.average(pos['label']) == 1:
     left = tree_node(None,None,1,None,None)
   else:
-    left = train_tree(pos,level+1)
+    left = train_tree(pos,level+1,randomize)
 
   if np.average(neg['label']) == 0:
     right = tree_node(None,None,0,None,None)
   elif np.average(neg['label']) == 1:
     right = tree_node(None,None,1,None,None)
   else:
-    right = train_tree(neg,level+1)
+    right = train_tree(neg,level+1,randomize)
 
   ftype = dataframe[feature].dtype
   root = tree_node(feature,ftype,value,left,right)
@@ -188,30 +207,12 @@ def make_results_csv(test_results,thing):
   results_df.to_csv('out/' + thing + '.csv')
   return results_df
 
-def random_columns(dataframe):
-  entries = dataframe.columns
-  entries = filter(lambda n: n != 'label',entries)
-  new_cols = np.array(entries)
-  random.shuffle(new_cols)
-  new_cols = new_cols[:int(np.ceil(np.sqrt(len(new_cols))))]
-  new_cols = np.concatenate((new_cols,['label']))
-  return new_cols
-
-def random_points(dataframe,n):
-  df0 = dataframe[dataframe['label']==0]
-  df1 = dataframe[dataframe['label']==1]
-  num0 = map(lambda i: random.randint(0,df0.shape[0]-1),xrange(n/2))
-  num1 = map(lambda i: random.randint(0,df1.shape[0]-1),xrange(n/2))
-  sel0 = df0.iloc[num0]
-  sel1 = df1.iloc[num1]
-  return sel0.append(sel1)
-
 def forest_tree(dataframe):
   new_df = random_points(dataframe,dataframe.shape[0])
-  ys = random_columns(dataframe)
-  print 'making a tree in forest!',ys
-  new_df = new_df[ys]
-  tree = train_tree(new_df)
+  # ys = random_columns(dataframe)
+  print 'making a tree in forest!'
+  # new_df = new_df[ys]
+  tree = train_tree(new_df,randomize=True)
   return tree
 
 def train_validate_check_forest(data):
@@ -254,7 +255,7 @@ def forest(train,validate,test,FOREST_DENSITY):
 def census(target='census'):
   global censuses
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
-  data_cleanup(train,train)
+  # data_cleanup(train,train)
   censuses = train
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
@@ -268,7 +269,7 @@ def census(target='census'):
   print 'validation correct rate:',score
   
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
-  data_cleanup(test,train)
+  # data_cleanup(test,train)
   get_lab_test = lambda i: get_label_tree(tree,test.iloc[i])
   test_results = map(get_lab_test,xrange(test.shape[0]))
   results_df = make_results_csv(test_results,target)
@@ -303,11 +304,11 @@ def census_forest(target='census'):
   global train,validate,test
   global results,test_results
   train = pd.DataFrame.from_csv('census_data/train_data.csv')
-  data_cleanup(train,train)
+  # data_cleanup(train,train)
   train = train[train.columns[train.columns != 'fnlwgt']]
   train,validate = get_train_validate(train)
   test = pd.DataFrame.from_csv('census_data/test_data.csv')
-  data_cleanup(test,train)
+  # data_cleanup(test,train)
   
   results,test_results,top_splits = forest(train,validate,test,CENSUS_FOREST_DENSITY)
   with open('out/census_forest.out','w') as f:

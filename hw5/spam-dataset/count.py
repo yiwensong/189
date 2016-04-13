@@ -26,6 +26,8 @@ def get_dict(files,cnt_weight):
         with open(fname,'r') as f:
             buf = f.read()
             words = filter(lambda a: a not in ['','a','the','to','and','is'],re.split('\W+',buf))
+            no_dig = lambda a: re.match('[0-9]+',a) is None
+            words = filter(no_dig,words)
             puncts = filter(lambda a: a not in [' ','\r','\n',',','.','\'','\x01','\\',''] , re.findall('\W',buf))
             printable = set(string.printable)
             puncts = filter(lambda a: a in printable,puncts)
@@ -70,7 +72,7 @@ def add_feature_function(n):
     return FCN_START + FCN_MID + FCN_END
 
 
-FEATURES_TO_USE = 1500
+FEATURES_TO_USE = 3000
 
 def codegen():
     global keys,values
