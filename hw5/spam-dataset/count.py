@@ -60,12 +60,16 @@ def generate_count(n,text):
     FCN_END = '\')\n'
     return FCN_START + NUM + FCN_MID + TEXT + FCN_END
 
+def generate_feature_comment(n,text,value):
+    COMMENT = '\n#    F' + str(n) + ': \'' + str( text ) + '\', ' + str(value) + '\n'
+    return COMMENT
+
 def add_feature(n):
     return '    feature.append(F' + str(n) + '(text, freq))\n'
 
 def add_feature_function(n):
     FCN_START = 'def generate_feature_vector(text,freq):\n    feature = []\n'
-    FCN_END = '    return feature'
+    FCN_END = '    return feature\n'
     FCN_MID = ''
     for i in xrange(n):
         FCN_MID += add_feature(i)
@@ -84,6 +88,8 @@ def codegen():
             f_out.write(f_in.read())
         for i in xrange(FEATURES_TO_USE):
             feature = keys[i]
+            value = values[i]
+            f_out.write(generate_feature_comment(i,feature,value))
             if re.match('\W+',feature) is None:
                 f_out.write(generate_freq(i,feature))
             else:
