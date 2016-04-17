@@ -1,0 +1,6 @@
+housing_dataset/*
+spam_dataset/*
+out
+*.pyc
+hw6_zip
+dataset/*
