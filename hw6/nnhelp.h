@@ -44,7 +44,7 @@ void cross_ent_loss_deriv(double* pred, double* actual, double* dst);
 void hidden_output(double* hidden, double* finput, double* dst);
 void output_output(double* output, double* hinput, double* dst);
 void nn_outputs(double* inputs, double* hidden, double* output, double* dst);
-void backprop(double* inputs, double* hidden, double* outputs);
+void backprop(double* inputs, double* hidden, double* outputs, double* labels);
 void init_units(double* hidden, double* outputs);
 
 

@@ -20,6 +20,8 @@
 #define LOSS_G(x,y,z) cross_ent_loss(x,y,z)
 #endif
 
+double epsilon;
+
 /* BASIC UPDATE FUNCTIONS */
 /* The sigmoid function and its derivative*/
 double sigmoid(double x)
@@ -92,41 +94,70 @@ void cross_ent_loss_deriv(double* pred, double* actual, double* dst)
 /* HELPER FUNCTIONS FOR NN CALCULATIONS */
 void hidden_output(double* hidden, double* finput, double* dst)
 {
+  /*
   double x[NUM_FEATURES + 1];
   memcpy(x,finput,(NUM_FEATURES + 1) * sizeof(double));
-  x[NUM_FEATURES] = 0.0;
+  */
+  memset(dst,0,(NUM_FEATURES + 1) * sizeof(double));
+  finput[NUM_FEATURES] = 1.0;
 
-  dgemv(hidden,x,dst,NUM_HIDDEN,NUM_FEATURES + 1);
+  dgemv(hidden,finput,dst,NUM_HIDDEN,NUM_FEATURES + 1);
 }
 
 void output_output(double* output, double* hinput, double* dst)
 {
+  /*
   double x[NUM_HIDDEN + 1];
   memcpy(x,hinput,(NUM_HIDDEN + 1 ) * sizeof(double));
-  x[NUM_HIDDEN] = 0.0;
+  */
+  memset(dst,0,(NUM_HIDDEN + 1) * sizeof(double));
+  hinput[NUM_HIDDEN] = 1.0;
 
-  dgemv(output,x,dst,NUM_OUTPUTS,NUM_HIDDEN + 1);
+  dgemv(output,hinput,dst,NUM_OUTPUTS,NUM_HIDDEN + 1);
 }
 
+/* Make sure inputs has an extra spot to add the 1 vector */
 void nn_outputs(double* inputs, double* hidden, double* output, double* dst)
 {
-  double hout[NUM_HIDDEN];
-  hidden_output(hidden, inputs, hout);
+  hidden_output(hidden, inputs, dst);
   for(int i=0;i<NUM_HIDDEN;i++)
   {
-    hout[i] = tanh(hout[i]);
+    dst[i] = tanh(dst[i]);
   }
 
-  output_output(output,hout,dst);
+  double* d2 = dst + NUM_HIDDEN + 1;
+  output_output(output,dst,d2);
   for(int i=0;i<NUM_OUTPUTS;i++)
   {
-    dst[i] = sigmoid(dst[i]);
+    d[i] = sigmoid(d[i]);
   }
 }
 
-void backprop(double* inputs, double* hidden, double* outputs)
+void backprop(double* inputs, double* hidden, double* output, double* labels)
 {
-  
+  double buf[NUM_HIDDEN + NUM_OUTPUTS + 1];
+  double *hidden_out = buf;
+  double *output_out = buf + NUM_HIDDEN + 1;
+  nn_outputs(inputs,hidden,output,buf);
+
+  double gradient[NUM_OUTPUTS];
+  LOSS_G(output_out,labels,gradient);
+
+  double out_g[NUM_OUTPUTS];
+  for(int i=0;i<NUM_OUTPUTS;i++)
+  {
+    out_g[i] = gradient[i] * (output_out[i] * (1-output_out[i]));
+  }
+
+  double hidden_g[NUM_HIDDEN + 1];
+  for(int i=0;i<NUM_HIDDEN + 1;i++)
+  {
+    hidden_g[i] = 0.0;
+    for(int i=0;i<NUM_OUTPUTS;i++)
+    {
+      hidden_g[i] += out_g[j] * (1 - hidden_out[i] * hidden_out[i]);
+    }
+  }
 }
 
 void init_units(double* hidden, double* outputs)
