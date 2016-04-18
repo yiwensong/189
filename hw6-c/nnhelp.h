@@ -44,6 +44,9 @@ void cross_ent_loss_deriv(double* pred, double* actual, double* dst);
 void hidden_output(double* hidden, double* finput, double* dst);
 void output_output(double* output, double* hinput, double* dst);
 void nn_outputs(double* inputs, double* hidden, double* output, double* dst);
+void output_weight_grad(double* y, double* z, double* loss_gradient, double* h, double* dst);
+void hidden_out_grad(double* y, double* z, double* loss_gradient, double* weights, double* dst);
+void hidden_weight_grad(double* h_grad, double* q, double* f, double* dst);
 void backprop(double* inputs, double* hidden, double* outputs, double* labels);
 void init_units(double* hidden, double* outputs);
 
@@ -52,4 +55,6 @@ void init_units(double* hidden, double* outputs);
 /* Other util functions */
 void shuffle(size_t* idx, size_t len);
 void dgemv(double* A, double* x, double* y, int rows, int columns);
+void dgemv_rev(double* A, double* x, double* y, int rows, int columns, double scale);
+void outerprod(double* A, double* B, double* C, double scale, double learning, int A_len, int B_len);
 off_t xy2off(int row, int col, size_t row_size);

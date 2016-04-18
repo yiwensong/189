@@ -14,10 +14,10 @@
 
 #ifdef MEAN_SQ_LOSS
 #define LOSS(x,y) mean_sq_loss(x,y)
-#define LOSS_G(x,y,z) mean_sq_loss(x,y,z)
+#define LOSS_G(x,y,z) mean_sq_loss_deriv(x,y,z)
 #else
 #define LOSS(x,y) cross_ent_loss(x,y)
-#define LOSS_G(x,y,z) cross_ent_loss(x,y,z)
+#define LOSS_G(x,y,z) cross_ent_loss_deriv(x,y,z)
 #endif
 
 double epsilon;
@@ -79,6 +79,7 @@ void mean_sq_loss_deriv(double* pred, double* actual, double* dst)
     dst[i] = pred - actual;
   }
 }
+
 void cross_ent_loss_deriv(double* pred, double* actual, double* dst)
 {
   for(int i=0;i<NUM_OUTPUTS+1;i++)
@@ -120,22 +121,70 @@ void output_output(double* output, double* hinput, double* dst)
 void nn_outputs(double* inputs, double* hidden, double* output, double* dst)
 {
   hidden_output(hidden, inputs, dst);
+  double* d1 = dst + NUM_HIDDEN + 1;
   for(int i=0;i<NUM_HIDDEN;i++)
   {
-    dst[i] = tanh(dst[i]);
+    d1[i] = tanh(d1[i]);
   }
 
-  double* d2 = dst + NUM_HIDDEN + 1;
+  double* d2 = dst + 2 * (NUM_HIDDEN + 1);
   output_output(output,dst,d2);
   for(int i=0;i<NUM_OUTPUTS;i++)
   {
-    d[i] = sigmoid(d[i]);
+    d2[i] = sigmoid(d2[i]);
   }
+}
+
+void output_weight_grad(double* y, double* z, double* loss_gradient, double* h, double* dst)
+{
+  /* sum( (z_i - y_i) ^ 2 ) * z(1-z) * h(vec) */
+  double sum_diffsq = 0.0;
+  for(int i=0;i<NUM_OUTPUTS;i++)
+  {
+    sum_diffsq += loss_gradient[i];
+  }
+  double s_deriv[NUM_OUTPUTS];
+  for(int i=0;i<NUM_OUTPUTS;i++)
+  {
+    s_deriv[i] = z[i] * (1 - z[i]);
+  }
+
+  outerprod(h,s_deriv,dst,sum_diffsq,epsilon,NUM_HIDDEN + 1,NUM_OUTPUTS);
+}
+
+void hidden_out_grad(double* y, double* z, double* loss_gradient, double* weights, double* dst)
+{
+  /* sum( sum( (z_i - y_i) ^2 ) z(1-z) * w_i(vec) ) */
+  double sum_diffsq = 0.0;
+  for(int i=0;i<NUM_OUTPUTS;i++)
+  {
+    sum_diffsq += loss_gradient[i];
+  }
+
+  double s_deriv[NUM_OUTPUTS];
+  for(int i=0;i<NUM_OUTPUTS;i++)
+  {
+    s_deriv[i] = z[i] * (1 - z[i]);
+  }
+
+  dgemv_rev(weights,s_deriv,dst,NUM_HIDDEN + 1,NUM_OUTPUTS,sum_diffsq);
+}
+
+void hidden_weight_grad(double* h_grad, double* q, double* f, double* dst)
+{
+  /* (1 - q^2) * f OUTERPROD dL/dh */
+  double row[NUM_HIDDEN];
+  for(int i=0;i<NUM_HIDDEN;i++)
+  {
+    row[i] = (1 - q[i] * q[i]) * h_grad[i];
+  }
+
+  outerprod(row,f,dst,1.0,epsilon,NUM_HIDDEN,NUM_FEATURES+1);
 }
 
 void backprop(double* inputs, double* hidden, double* output, double* labels)
 {
-  double buf[NUM_HIDDEN + NUM_OUTPUTS + 1];
+  double buf[NUM_HIDDEN + 2 * (NUM_OUTPUTS + 1)];
   double *hidden_out = buf;
   double *output_out = buf + NUM_HIDDEN + 1;
   nn_outputs(inputs,hidden,output,buf);
@@ -153,7 +202,7 @@ void backprop(double* inputs, double* hidden, double* output, double* labels)
   for(int i=0;i<NUM_HIDDEN + 1;i++)
   {
     hidden_g[i] = 0.0;
-    for(int i=0;i<NUM_OUTPUTS;i++)
+    for(int j=0;j<NUM_OUTPUTS;j++)
     {
       hidden_g[i] += out_g[j] * (1 - hidden_out[i] * hidden_out[i]);
     }
@@ -205,6 +254,38 @@ void dgemv(double* A, double* x, double* y, int rows, int columns)
   int incY = 1;
 
   cblas_dgemv(order,transpose,M,N,alpha,A,lda,x,incX,beta,y,incY);
+}
+
+void dgemv_rev(double* A, double* x, double* y, int rows, int columns, double scale)
+{
+  const enum CBLAS_ORDER order = CblasRowMajor;
+  const enum CBLAS_TRANSPOSE transpose = CblasTrans;
+  int M = rows;
+  int N = columns;
+  double alpha = scale;
+  int lda = N;
+  int incX = 1;
+  double beta = 1.0;
+  int incY = 1;
+
+  cblas_dgemv(order,transpose,M,N,alpha,A,lda,x,incX,beta,y,incY);
+}
+
+void outerprod(double* A, double* B, double* C, double scale, double learning, int A_len, int B_len)
+{
+  const enum CBLAS_ORDER order = CblasRowMajor;
+  const enum CBLAS_TRANSPOSE TransA = CblasNoTrans;
+  const enum CBLAS_TRANSPOSE TransB = CblasNoTrans;
+  int M = A_len;
+  int N = B_len;
+  int K = 1;
+  double alpha = scale * learning;
+  int lda = 1;
+  int ldb = B_len;
+  int ldc = B_len;
+  double beta = 1.0;
+
+  cblas_dgemm(order,TransA,TransB,M,N,K,alpha,A,lda,B,ldb,beta,C,ldc);
 }
 
 off_t xy2off(int row, int col, size_t row_size)
