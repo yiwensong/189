@@ -10,6 +10,7 @@ ITERATIONS = 100000000
 
 def format_img(img):
   img = np.swapaxes(img,0,2)
+  img = np.swapaxes(img,1,2)
   img = img.reshape((img.shape[0],img.shape[1]*img.shape[2]))
   return img
 
