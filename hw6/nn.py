@@ -30,10 +30,13 @@ def load_data_digits():
   train_img = np.array(map(lambda a: a.flatten(),train_img),dtype='double')
   test_img  = np.array(map(lambda a: a.flatten(), test_img),dtype='double')
 
-  row_sums = np.linalg.norm(train_img,axis=1) + .0001
-  train_img = (train_img.T/row_sums[:np.newaxis]).T
-  row_sums = np.linalg.norm(test_img ,axis=1) + .0001
-  test_img  = (test_img.T /row_sums[:np.newaxis]).T
+  test_img  = np.ceil(test_img  / (test_img  + .0001))
+  train_img = np.ceil(train_img / (train_img + .0001))
+
+  # row_sums = np.linalg.norm(train_img,axis=1) + .0001
+  # train_img = (train_img.T/row_sums[:np.newaxis]).T
+  # row_sums = np.linalg.norm(test_img ,axis=1) + .0001
+  # test_img  = (test_img.T /row_sums[:np.newaxis]).T
 
   train_lab = np.ravel(sio.loadmat(DIGIT_PATH + 'train.mat')['train_labels'])
   train_lab = np.array(map(nn_label_format,train_lab))
@@ -63,7 +66,7 @@ def main():
   img = img[:TRAIN_SAMPLES]
   lab = lab[:TRAIN_SAMPLES]
 
-  rate = .00005
+  rate = .001
   idx = 0
   while True:
     if idx % TRAIN_SAMPLES == 0:
@@ -81,7 +84,7 @@ def main():
     # if idx % 100000 == 0:
     #   rate = rate/2
 
-    hidden,output = backprop(img[idx%TRAIN_SAMPLES],lab[idx%TRAIN_SAMPLES],hidden,output,learning_rate=rate,loss=mean_sq_loss_grad)
+    hidden,output = backprop(img[idx%TRAIN_SAMPLES],lab[idx%TRAIN_SAMPLES],hidden,output,learning_rate=rate,loss=cross_ent_loss_grad)
     idx = (idx + 1) % TRAIN_SAMPLES
 
   lbl = [''] * (available - TRAIN_SAMPLES)
