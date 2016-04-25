@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.io as sio
 
+import pandas as pd
+
 from nn_help import *
 
 DIGIT_PATH = 'dataset/'
@@ -69,7 +71,8 @@ def main():
 
   rate = .001
   idx = 0
-  while True:
+  val_rate = 0.0
+  while val_rate < .95:
     if idx % TRAIN_SAMPLES == 0:
       img,lab = get_samples(TRAIN_SAMPLES,img,lab)
 
@@ -80,7 +83,8 @@ def main():
         lbl[idx] = get_label(vimg[idx],hidden,output)
       lbl = np.array(lbl)
       vlabel_int = np.array(map(np.argmax,vlab))
-      print "Validation rate:",np.sum(lbl == vlabel_int)/float(lbl.shape[0])
+      val_rate = np.sum(lbl == vlabel_int)/float(lbl.shape[0])
+      print "Validation rate:",val_rate
 
     # if idx % 100000 == 0:
     #   rate = rate/2
@@ -88,12 +92,34 @@ def main():
     hidden,output = backprop(img[idx%TRAIN_SAMPLES],lab[idx%TRAIN_SAMPLES],hidden,output,learning_rate=rate,loss=cross_ent_loss_grad)
     idx = (idx + 1) % TRAIN_SAMPLES
 
+    if idx == 550000:
+      rate = rate/2
+
   lbl = [''] * (available - TRAIN_SAMPLES)
   for idx in xrange(available - TRAIN_SAMPLES):
     lbl[idx] = get_label(vimg[idx],hidden,output)
   lbl = np.array(lbl)
   vlabel_int = np.array(map(np.argmax,vlab))
   print "Validation rate:",np.sum(lbl == vlabel_int)/float(lbl.shape[0])
+
+  do_test()
+
+  print 'done'
+
+
+def do_test():
+  tlbl = [''] * len(test)
+  for idx in xrange(len(test)):
+    tlbl[idx] = get_label(test[idx],hidden,output)
+  tlbl = np.array(tlbl)
+
+  global results
+  results = pd.DataFrame(tlbl)
+  results.columns = np.array(['category'])
+  results.index.name = 'id'
+  results.index += 1
+  results.to_csv('out/nn.csv')
+  return results
 
 
 if __name__=='__main__':
