@@ -61,7 +61,10 @@ def hidden_weight_grad(q,f,h_grad):
   f = np.concatenate((f,[1.]))
   return np.outer(qh,f)
 
-def backprop(features,label,hidden,output,learning_rate=.005,loss=mean_sq_loss_grad):
+def backprop(features,label,hidden,output,learning_rate=.005,loss=mean_sq_loss_grad,decay=None):
+  if decay is None:
+    decay = .001 * learning_rate
+
   h0,h,z0,z = nn_output(features,hidden,output)
   Lz_grad = loss(z,label)
   # print 'mean sq loss',mean_sq_loss(z,label)
@@ -72,8 +75,8 @@ def backprop(features,label,hidden,output,learning_rate=.005,loss=mean_sq_loss_g
   Lh_grad = hidden_out_grad(z,Lz_grad,output)
   hidden_update = hidden_weight_grad(h,features,Lh_grad)
 
-  output = output + learning_rate * output_update
-  hidden = hidden + learning_rate * hidden_update
+  output = output + learning_rate * output_update - decay * output
+  hidden = hidden + learning_rate * hidden_update - decay * hidden
 
   return hidden,output
 

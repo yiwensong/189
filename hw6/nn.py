@@ -1,14 +1,16 @@
 import numpy as np
 import scipy.io as sio
 
+import matplotlib.pyplot as plt
+
 import pandas as pd
 
 from nn_help import *
 
 DIGIT_PATH = 'dataset/'
-TRAIN_SAMPLES = 55000
+TRAIN_SAMPLES = 50000
 
-ITERATIONS = 100000000
+ITERATIONS = 20
 
 def format_img(img):
   img = np.swapaxes(img,0,2)
@@ -69,31 +71,55 @@ def main():
   img = img[:TRAIN_SAMPLES]
   lab = lab[:TRAIN_SAMPLES]
 
-  rate = .001
+  rate = .002
   idx = 0
+  iteration = 0
   val_rate = 0.0
-  while val_rate < .95:
+  
+  train_errors = [0.0] * (ITERATIONS * TRAIN_SAMPLES / 1000)
+  validation_errors = [0.0] * (ITERATIONS * TRAIN_SAMPLES / 1000)
+
+  while iteration < ITERATIONS * TRAIN_SAMPLES:
     if idx % TRAIN_SAMPLES == 0:
       img,lab = get_samples(TRAIN_SAMPLES,img,lab)
 
-    if idx % (TRAIN_SAMPLES/2) == 0:
-      print idx
+    if iteration % 1000 == 0:
+      print iteration
+
       lbl = [''] * (available - TRAIN_SAMPLES)
-      for idx in xrange(available - TRAIN_SAMPLES):
-        lbl[idx] = get_label(vimg[idx],hidden,output)
+      for i in xrange(available - TRAIN_SAMPLES):
+        lbl[i] = get_label(vimg[i],hidden,output)
       lbl = np.array(lbl)
       vlabel_int = np.array(map(np.argmax,vlab))
       val_rate = np.sum(lbl == vlabel_int)/float(lbl.shape[0])
-      print "Validation rate:",val_rate
 
-    # if idx % 100000 == 0:
-    #   rate = rate/2
+      train_lbl = [''] * (TRAIN_SAMPLES)
+      for i in xrange(TRAIN_SAMPLES):
+        train_lbl[i] = get_label(img[i],hidden,output)
+      train_lbl = np.array(train_lbl)
+      label_int = np.array(map(np.argmax,lab))
+      tval_rate = np.sum(train_lbl == label_int)/float(train_lbl.shape[0])
+
+      train_errors[ iteration / 1000 ] = 1.0 - tval_rate
+      validation_errors[ iteration / 1000 ] = 1.0 - val_rate
+
+      print "Test rate:",tval_rate
+      print "Validation rate:",val_rate
+      print "Test Error:",iteration/1000,train_errors[ iteration / 1000 ]
+      print "Validation Error:",iteration/1000,validation_errors[ iteration / 1000 ]
 
     hidden,output = backprop(img[idx%TRAIN_SAMPLES],lab[idx%TRAIN_SAMPLES],hidden,output,learning_rate=rate,loss=cross_ent_loss_grad)
     idx = (idx + 1) % TRAIN_SAMPLES
 
-    if idx == 550000:
-      rate = rate/2
+    if (idx % (TRAIN_SAMPLES/4)) == 0:
+      rate = rate * .95
+
+    iteration += 1
+
+  tr_err_line, = plt.plot(train_errors)
+  v_err_line,  = plt.plot(validation_errors)
+  plt.legend(handles=[tr_err_line,v_err_line],labels=['Training Error','Validation Error'])
+  plt.savefig('out/errors.svg')
 
   lbl = [''] * (available - TRAIN_SAMPLES)
   for idx in xrange(available - TRAIN_SAMPLES):
@@ -116,8 +142,8 @@ def do_test():
   global results
   results = pd.DataFrame(tlbl)
   results.columns = np.array(['category'])
-  results.index.name = 'id'
   results.index += 1
+  results.index.name = 'id'
   results.to_csv('out/nn.csv')
   return results
 
