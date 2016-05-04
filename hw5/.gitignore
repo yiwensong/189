@@ -1,5 +1,8 @@
 housing_dataset/*
 spam_dataset/*
+census_data
+spam-dataset
 out*
 *.pyc
 hw4_zip
+tree2.py

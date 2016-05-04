@@ -1,0 +1,5 @@
+To run:
+  mkdir out
+  python2 nn.py
+
+Make sure you have numpy, scipy, matplotlib, and pandas installed.
