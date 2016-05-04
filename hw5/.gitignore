@@ -1,5 +1,5 @@
 housing_dataset/*
 spam_dataset/*
-out
+out*
 *.pyc
 hw4_zip
