@@ -53,5 +53,42 @@ def nnn_jokes():
 
 def reduce_dim(data,n):
   u,s,v = np.linalg.svd(data,full_matrices=False)
-  b = v[:n]
-  return np.dot(np.dot(data,b.T),b)
+  u = u.T[:n].T
+  s = np.diag(s[:n])
+  v = v[:n]
+  return np.dot(np.dot(u,s),v)
+
+def MSE(data,red):
+  dudes,things = data.shape
+  mse = 0
+  for i in xrange(dudes):
+    for j in xrange(things):
+      if data[i,j] == data[i,j]:
+        mse += (red[i,j] - data[i,j]) ** 2
+  return mse
+
+def validate_pca(red):
+  with open(PATH + 'validation.txt','r') as f:
+    right = 0.
+    total = 0.
+    for line in f:
+      split = re.split(',',line)
+      me_irl = int(split[0]) - 1
+      joke_idx = int(split[1]) - 1
+      vpref = 2 * int(split[2]) - 1
+      pref = np.sign(red[me_irl,joke_idx])
+      right += float(pref == vpref)
+      total += 1.
+  return right/total
+
+def test_pca(data,raw,n):
+  red = reduce_dim(data,n)
+  mse = MSE(raw,red)
+  score = validate_pca(red)
+  print mse
+  print score
+
+def pca_jokes():
+  get_joke_data()
+  for i in [2,5,10,20]:
+    test_pca(jokes_fmt,jokes,i)
