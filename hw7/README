@@ -1,0 +1,14 @@
+kmeans:
+  python kmeans.py
+
+nearest neighbors:
+  python jokes.py
+  >>> nnn_jokes()
+
+SVD:
+  python jokes.py
+  >>> pca_jokes()
+
+The thing at the end:
+  python jokes.py
+  >>> main()
